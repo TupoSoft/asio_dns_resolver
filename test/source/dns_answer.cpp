@@ -4,7 +4,7 @@
 
 #include <span>
 
-using namespace kyrylokupin::asio::dns;
+using namespace tuposoft::asio::dns;
 
 TEST(dns_answer, parse_rdata_a) {
     constexpr auto expected = "178.151.191.58";

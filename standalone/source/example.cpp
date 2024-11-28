@@ -7,7 +7,7 @@
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace asio = boost::asio;
-namespace dns = kyrylokupin::asio::dns;
+namespace dns = tuposoft::asio::dns;
 
 auto handle_session(asio::ip::tcp::socket socket, std::shared_ptr<dns::resolver> resolver) -> asio::awaitable<void> {
     try {

@@ -5,7 +5,7 @@
 #include <span>
 #include <algorithm>
 
-using namespace kyrylokupin::asio::dns;
+using namespace tuposoft::asio::dns;
 
 TEST(common, parse_query) {
     constexpr auto QUERY_QUESTION_OFFSET = 12;
