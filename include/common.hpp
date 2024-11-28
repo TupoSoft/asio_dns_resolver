@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     constexpr auto BYTE_SIZE = static_cast<std::uint8_t>(0x08);
     constexpr auto FULL_BYTE = static_cast<std::uint8_t>(0xFF);
     constexpr auto UPPER_TWO_BITS_MASK = static_cast<std::uint8_t>(0xC0);

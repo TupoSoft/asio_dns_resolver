@@ -2,7 +2,7 @@
 
 #include <tuple>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     auto tie_dns_query(const dns_query &query) { return std::tie(query.header, query.question); }
 
     auto operator==(const dns_query &first, const dns_query &second) -> bool {

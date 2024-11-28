@@ -15,7 +15,7 @@
 
 #include <sstream>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     namespace asio = boost::asio;
     class resolver {
     private:
@@ -54,7 +54,7 @@ namespace kyrylokupin::asio::dns {
                                         timeout(timeout_seconds));
 
                 if (result.index() == 0) {
-                    auto dns_response = kyrylokupin::asio::dns::dns_response<T>{};
+                    auto dns_response = tuposoft::asio::dns::dns_response<T>{};
                     auto instream = std::istringstream{{input.begin(), input.end()}, std::ios::binary};
                     instream >> dns_response;
                     co_return dns_response.answers;

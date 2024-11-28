@@ -2,7 +2,7 @@
 
 #include "common.hpp"
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     enum struct qtype : std::uint8_t {
         A = 1, // IPv4 address record
         NS = 2, // Delegates a DNS zone to use the given authoritative name servers

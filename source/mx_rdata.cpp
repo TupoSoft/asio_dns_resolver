@@ -2,7 +2,7 @@
 
 #include <tuple>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     auto tie_mx_rdata(const mx_rdata &rdata) { return std::tie(rdata.preference, rdata.mx); }
 
     auto operator==(const mx_rdata &first, const mx_rdata &second) -> bool {
