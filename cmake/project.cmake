@@ -1,4 +1,4 @@
-set(PROJECT_NAMESPACE "kyrylokupin")
+set(PROJECT_NAMESPACE "tuposoft")
 
 set(BASE_PROJECT_NAME "asio_dns_resolver")
 set(TEST_PROJECT_NAME "${BASE_PROJECT_NAME}_test")

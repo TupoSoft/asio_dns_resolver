@@ -9,7 +9,6 @@
 #include "boost/asio/experimental/awaitable_operators.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
 #include "boost/asio/use_awaitable.hpp"
-#include "boost/system/detail/errc.hpp"
 
 #include <fmt/core.h>
 
@@ -19,7 +18,7 @@ namespace tuposoft::asio::dns {
     namespace asio = boost::asio;
     class resolver {
     private:
-        static constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
+        static constexpr auto use_nothrow_awaitable = as_tuple(asio::use_awaitable);
         static auto timeout(std::chrono::seconds timeout_duration_s) -> asio::awaitable<void> {
             auto timer = asio::steady_timer{co_await asio::this_coro::executor};
             timer.expires_after(timeout_duration_s);
@@ -91,7 +90,7 @@ namespace tuposoft::asio::dns {
                 segments.push_back(segment);
             }
 
-            std::reverse(segments.begin(), segments.end());
+            std::ranges::reverse(segments);
 
             auto reversed_ip = std::string{};
             for (const auto &seg: segments) {
@@ -119,4 +118,4 @@ namespace tuposoft::asio::dns {
                                  .cls = qclass::INET,
                          }};
     }
-} // namespace kyrylokupin::asio::dns
+} // namespace tuposoft::asio::dns
