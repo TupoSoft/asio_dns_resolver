@@ -2,7 +2,7 @@
 
 #include "common.hpp"
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     struct mx_rdata {
         std::uint16_t preference{};
         std::string mx;

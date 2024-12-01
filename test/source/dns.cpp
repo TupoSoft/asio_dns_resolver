@@ -4,7 +4,7 @@
 
 #include <ios>
 
-using namespace kyrylokupin::asio::dns;
+using namespace tuposoft::asio::dns;
 
 constexpr auto STRING_TERMINATOR = '\0';
 

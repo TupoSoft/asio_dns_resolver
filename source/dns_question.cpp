@@ -2,7 +2,7 @@
 
 #include <boost/asio.hpp>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     auto tie_dns_question(const dns_question &question) {
         return std::tie(question.qname, question.type, question.cls);
     }

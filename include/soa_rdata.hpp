@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdint>
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     struct soa_rdata {
         std::string mname;
         std::string rname;

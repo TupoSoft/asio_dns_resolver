@@ -5,7 +5,7 @@
 
 #include <span>
 
-using namespace kyrylokupin::asio::dns;
+using namespace tuposoft::asio::dns;
 
 TEST(dns_response, mx) {
     constexpr auto RESPONSE_ID = 0x276F;

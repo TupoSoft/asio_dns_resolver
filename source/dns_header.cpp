@@ -6,7 +6,7 @@ constexpr unsigned SINGLE_BIT_MASK = 1U;
 constexpr unsigned OPCODE_MASK = 0xFU;
 constexpr unsigned RCODE_MASK = 0xFU;
 
-namespace kyrylokupin::asio::dns {
+namespace tuposoft::asio::dns {
     auto header_flags_to_short(const dns_header &header) -> std::uint16_t {
         return header.rd << RD_POSITION | header.tc << TC_POSITION | header.aa << AA_POSITION |
                header.opcode << OPCODE_POSITION | header.qr << QR_POSITION | header.rcode << RCODE_POSITION |

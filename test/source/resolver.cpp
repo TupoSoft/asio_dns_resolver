@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 
-using namespace kyrylokupin::asio::dns;
+using namespace tuposoft::asio::dns;
 using namespace boost::asio;
 
 class resolver_test : public testing::Test {
