@@ -24,7 +24,7 @@ CPMAddPackage(
 )
 
 set(LIBRARIES "fmt::fmt" "boost_asio")
-if (${WIN32})
+if (WIN32)
     add_definitions(-D_WIN32_WINNT=0x0A00)
     list(APPEND LIBRARIES "ws2_32" "wsock32")
 endif ()
