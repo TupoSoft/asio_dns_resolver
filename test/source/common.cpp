@@ -2,8 +2,8 @@
 
 #include "gtest/gtest.h"
 
-#include <span>
 #include <algorithm>
+#include <span>
 
 using namespace tuposoft::asio::dns;
 
@@ -11,7 +11,7 @@ TEST(common, parse_query) {
     constexpr auto QUERY_QUESTION_OFFSET = 12;
     constexpr auto EXPECTED = "tuposoft.com";
     constexpr auto QUERY_SIZE = 53;
-    std::span<const char, QUERY_SIZE> span(
+    std::span<const char, QUERY_SIZE> const span(
             "\250\256\001 "
             "\000\001\000\000\000\000\000\001\btuposoft\003com\000\000\017\000\001\000\000)"
             "\004\320\000\000\000\000\000\f\000\n\000\b\027\031>\263\030\356\246\237",

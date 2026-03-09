@@ -29,11 +29,11 @@ namespace tuposoft::asio::dns {
         std::uint16_t cls{};
         std::uint32_t ttl{};
         std::uint16_t rdlength{};
-        typename rdata<T>::type rdata;
+        rdata<T>::type rdata;
     };
 
     template<qtype T>
-    auto parse_rdata(std::istream &input) -> typename rdata<T>::type {
+    auto parse_rdata(std::istream &input) -> rdata<T>::type {
         return from_dns_label_format(input);
     }
 
@@ -73,4 +73,4 @@ namespace tuposoft::asio::dns {
     auto operator==(const dns_answer<T> &first, const dns_answer<T> &second) -> bool {
         return tie_dns_answer(first) == tie_dns_answer(second);
     };
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns

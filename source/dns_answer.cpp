@@ -4,7 +4,7 @@ using namespace tuposoft::asio::dns;
 
 template<>
 auto tuposoft::asio::dns::parse_rdata<qtype::MX>(std::istream &input) -> rdata<qtype::MX>::type {
-    return {read_big_endian<std::uint16_t>(input), from_dns_label_format(input)};
+    return {.preference = read_big_endian<std::uint16_t>(input), .mx = from_dns_label_format(input)};
 }
 
 template<>
@@ -36,10 +36,13 @@ auto tuposoft::asio::dns::parse_rdata<qtype::AAAA>(std::istream &input) -> rdata
 template<>
 auto tuposoft::asio::dns::parse_rdata<qtype::SOA>(std::istream &input) -> rdata<qtype::SOA>::type {
     return {
-            from_dns_label_format(input),          from_dns_label_format(input),
-            read_big_endian<std::uint32_t>(input), read_big_endian<std::uint32_t>(input),
-            read_big_endian<std::uint32_t>(input), read_big_endian<std::uint32_t>(input),
-            read_big_endian<std::uint32_t>(input),
+            .mname = from_dns_label_format(input),
+            .rname = from_dns_label_format(input),
+            .serial = read_big_endian<std::uint32_t>(input),
+            .refresh = read_big_endian<std::uint32_t>(input),
+            .retry = read_big_endian<std::uint32_t>(input),
+            .expire = read_big_endian<std::uint32_t>(input),
+            .minimum = read_big_endian<std::uint32_t>(input),
     };
 }
 

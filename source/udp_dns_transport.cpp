@@ -19,7 +19,7 @@ namespace tuposoft::asio::dns {
             co_await socket_.async_send(asio::buffer(bytes), asio::use_awaitable);
         }
 
-        auto receive(std::span<std::byte> buffer, std::chrono::milliseconds timeout)
+        auto receive(std::span<std::byte> buffer, const std::chrono::milliseconds timeout)
                 -> asio::awaitable<std::pair<boost::system::error_code, std::size_t>> override {
             using asio::experimental::awaitable_operators::operator||;
 

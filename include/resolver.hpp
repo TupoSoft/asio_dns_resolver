@@ -12,6 +12,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -33,6 +34,7 @@ namespace tuposoft::asio::dns {
             static constexpr auto timeout_seconds = std::chrono::seconds(3);
             static constexpr auto input_buffer_size = 2048;
             static constexpr auto max_retry_count = 10;
+
             const auto query = create_query<T>(domain);
             auto buf = asio::streambuf{};
             auto out = std::ostream{&buf};
@@ -58,8 +60,12 @@ namespace tuposoft::asio::dns {
                 }
 
                 auto dns_response = tuposoft::asio::dns::dns_response<T>{};
-                auto instream =
-                        std::istringstream{std::string({input.begin(), input.end()}, received), std::ios::binary};
+
+                auto chars = input | std::views::take(received) | std::views::transform([](const std::byte byte) -> auto {
+                                 return static_cast<char>(std::to_integer<unsigned char>(byte));
+                             });
+
+                auto instream = std::istringstream{std::string{chars.begin(), chars.end()}, std::ios::binary};
                 instream >> dns_response;
                 co_return dns_response.answers;
             }
