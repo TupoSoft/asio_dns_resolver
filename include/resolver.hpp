@@ -1,63 +1,73 @@
 #pragma once
 
-#include "boost/asio/steady_timer.hpp"
+#include "boost/asio/buffer.hpp"
 #include "dns_query.hpp"
 #include "dns_response.hpp"
 #include "qtype.hpp"
 
-#include "boost/asio/experimental/as_tuple.hpp"
-#include "boost/asio/experimental/awaitable_operators.hpp"
-#include "boost/asio/experimental/parallel_group.hpp"
-#include "boost/asio/use_awaitable.hpp"
+#include "dns_transport.hpp"
 
 #include <fmt/core.h>
 
+#include <array>
+#include <cstddef>
+#include <memory>
+#include <ranges>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace tuposoft::asio::dns {
     namespace asio = boost::asio;
     class resolver {
-    private:
-        static constexpr auto use_nothrow_awaitable = as_tuple(asio::use_awaitable);
-        static auto timeout(std::chrono::seconds timeout_duration_s) -> asio::awaitable<void> {
-            auto timer = asio::steady_timer{co_await asio::this_coro::executor};
-            timer.expires_after(timeout_duration_s);
-            co_await timer.async_wait(use_nothrow_awaitable);
-        }
-
     public:
-        explicit resolver(const asio::any_io_executor &executor) : socket_(executor) {}
+        explicit resolver(const asio::any_io_executor &executor);
+        explicit resolver(std::shared_ptr<dns_transport> transport) : transport_(std::move(transport)) {}
 
-        auto connect(const std::string server) -> asio::awaitable<void> {
+        auto connect(const std::string server) const -> asio::awaitable<void> {
             constexpr auto DNS_PORT = 53;
-            co_await socket_.async_connect({asio::ip::address::from_string(server), DNS_PORT}, asio::use_awaitable);
+            co_await transport_->connect({asio::ip::address::from_string(server), DNS_PORT});
         }
 
         template<qtype T>
         auto query(const std::string domain) -> asio::awaitable<std::vector<dns_answer<T>>> {
-            using namespace boost::asio::experimental::awaitable_operators;
             static constexpr auto timeout_seconds = std::chrono::seconds(3);
             static constexpr auto input_buffer_size = 2048;
             static constexpr auto max_retry_count = 10;
+
             const auto query = create_query<T>(domain);
             auto buf = asio::streambuf{};
             auto out = std::ostream{&buf};
             out << query;
 
-            auto input = std::array<char, input_buffer_size>{};
+            auto outgoing = std::vector<std::byte>(buf.size());
+            asio::buffer_copy(asio::buffer(outgoing), buf.data());
+
+            auto input = std::array<std::byte, input_buffer_size>{};
             auto curr_retry_count = 0;
             while (curr_retry_count < max_retry_count) {
-                co_await socket_.async_send(buffer(buf.data(), buf.size()), asio::use_awaitable);
+                co_await transport_->send(outgoing);
                 ++curr_retry_count;
-                auto result = co_await ((socket_.async_receive(asio::buffer(input), use_nothrow_awaitable)) or
-                                        timeout(timeout_seconds));
+                auto [error_code, received] = co_await transport_->receive(
+                        input, std::chrono::duration_cast<std::chrono::milliseconds>(timeout_seconds));
 
-                if (result.index() == 0) {
-                    auto dns_response = tuposoft::asio::dns::dns_response<T>{};
-                    auto instream = std::istringstream{{input.begin(), input.end()}, std::ios::binary};
-                    instream >> dns_response;
-                    co_return dns_response.answers;
+                if (error_code == asio::error::timed_out) {
+                    continue;
                 }
+
+                if (error_code) {
+                    throw std::runtime_error(fmt::format("UDP receive failed: {}", error_code.message()));
+                }
+
+                auto dns_response = tuposoft::asio::dns::dns_response<T>{};
+
+                auto chars = input | std::views::take(received) | std::views::transform([](const std::byte byte) -> auto {
+                                 return static_cast<char>(std::to_integer<unsigned char>(byte));
+                             });
+
+                auto instream = std::istringstream{std::string{chars.begin(), chars.end()}, std::ios::binary};
+                instream >> dns_response;
+                co_return dns_response.answers;
             }
 
             throw std::runtime_error(fmt::format("Timeout while waiting for UDP response"));
@@ -100,7 +110,7 @@ namespace tuposoft::asio::dns {
             return reversed_ip;
         }
 
-        asio::ip::udp::socket socket_;
+        std::shared_ptr<dns_transport> transport_;
     };
 
     template<>

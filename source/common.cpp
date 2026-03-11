@@ -2,6 +2,19 @@
 
 #include <ranges>
 
+namespace {
+    auto calculate_new_position(std::istream &input, const std::uint16_t next_byte) -> std::uint16_t {
+        return (next_byte & tuposoft::asio::dns::LOWER_SIX_BITS_MASK) << tuposoft::asio::dns::BYTE_SIZE |
+               static_cast<std::uint8_t>(input.get());
+    }
+
+    auto read_label_from_stream(std::istream &input, const std::uint8_t len) -> std::string {
+        std::vector<char> buffer(len);
+        input.read(buffer.data(), len);
+        return std::string{buffer.begin(), buffer.end()} + '.';
+    }
+} // namespace
+
 using namespace tuposoft::asio::dns;
 
 auto tuposoft::asio::dns::to_dns_label_format(const std::string &domain) -> std::vector<std::uint8_t> {
@@ -29,16 +42,6 @@ auto tuposoft::asio::dns::to_dns_label_format(const std::string &domain) -> std:
     }
 
     return label_format;
-}
-
-auto read_label_from_stream(std::istream &input, const std::uint8_t len) -> std::string {
-    std::vector<char> buffer(len);
-    input.read(buffer.data(), len);
-    return std::string{buffer.begin(), buffer.end()} + '.';
-}
-
-auto calculate_new_position(std::istream &input, const std::uint16_t next_byte) -> std::uint16_t {
-    return (next_byte & LOWER_SIX_BITS_MASK) << BYTE_SIZE | static_cast<std::uint8_t>(input.get());
 }
 
 auto tuposoft::asio::dns::from_dns_label_format(std::istream &input) -> std::string {

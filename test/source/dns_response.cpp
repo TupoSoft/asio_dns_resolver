@@ -11,32 +11,57 @@ TEST(dns_response, mx) {
     constexpr auto RESPONSE_ID = 0x276F;
     constexpr auto TTL = 300;
 
-    std::vector<dns_answer<qtype::MX>> expected = {
-            {"foobar.com", qtype::MX, 1, TTL, 19,
-             mx_rdata{
-                     1,
-                     "aspmx.l.google.com",
-             }},
-            {"foobar.com", qtype::MX, 1, TTL, 9,
-             mx_rdata{
-                     10,
-                     "alt3.aspmx.l.google.com",
-             }},
-            {"foobar.com", qtype::MX, 1, TTL, 9,
-             mx_rdata{
-                     10,
-                     "alt4.aspmx.l.google.com",
-             }},
-            {"foobar.com", qtype::MX, 1, TTL, 9,
-             mx_rdata{
-                     5,
-                     "alt1.aspmx.l.google.com",
-             }},
-            {"foobar.com", qtype::MX, 1, TTL, 9,
-             mx_rdata{
-                     5,
-                     "alt2.aspmx.l.google.com",
-             }},
+    std::vector<dns_answer<qtype::MX>> const expected = {
+            {.name = "foobar.com",
+             .type = qtype::MX,
+             .cls = 1,
+             .ttl = TTL,
+             .rdlength = 19,
+             .rdata =
+                     mx_rdata{
+                             .preference = 1,
+                             .mx = "aspmx.l.google.com",
+                     }},
+            {.name = "foobar.com",
+             .type = qtype::MX,
+             .cls = 1,
+             .ttl = TTL,
+             .rdlength = 9,
+             .rdata =
+                     mx_rdata{
+                             .preference = 10,
+                             .mx = "alt3.aspmx.l.google.com",
+                     }},
+            {.name = "foobar.com",
+             .type = qtype::MX,
+             .cls = 1,
+             .ttl = TTL,
+             .rdlength = 9,
+             .rdata =
+                     mx_rdata{
+                             .preference = 10,
+                             .mx = "alt4.aspmx.l.google.com",
+                     }},
+            {.name = "foobar.com",
+             .type = qtype::MX,
+             .cls = 1,
+             .ttl = TTL,
+             .rdlength = 9,
+             .rdata =
+                     mx_rdata{
+                             .preference = 5,
+                             .mx = "alt1.aspmx.l.google.com",
+                     }},
+            {.name = "foobar.com",
+             .type = qtype::MX,
+             .cls = 1,
+             .ttl = TTL,
+             .rdlength = 9,
+             .rdata =
+                     mx_rdata{
+                             .preference = 5,
+                             .mx = "alt2.aspmx.l.google.com",
+                     }},
     };
     auto expected_response =
             dns_response<qtype::MX>{{
@@ -97,33 +122,39 @@ TEST(dns_response, soa) {
     constexpr auto EXPIRE = 1209600;
     constexpr auto MINIMUM = 3600;
 
-    std::vector<dns_answer<qtype::SOA>> answers = {{"example.com", qtype::SOA, 1, TTL, RDLENGH,
-                                                    soa_rdata{
-                                                            .mname = "ns.icann.org",
-                                                            .rname = "noc.dns.icann.org",
-                                                            .serial = SERIAL,
-                                                            .refresh = REFRESH,
-                                                            .retry = RETRY,
-                                                            .expire = EXPIRE,
-                                                            .minimum = MINIMUM,
-                                                    }}};
+    std::vector<dns_answer<qtype::SOA>> const answers = {{.name = "example.com",
+                                                          .type = qtype::SOA,
+                                                          .cls = 1,
+                                                          .ttl = TTL,
+                                                          .rdlength = RDLENGH,
+                                                          .rdata = soa_rdata{
+                                                                  .mname = "ns.icann.org",
+                                                                  .rname = "noc.dns.icann.org",
+                                                                  .serial = SERIAL,
+                                                                  .refresh = REFRESH,
+                                                                  .retry = RETRY,
+                                                                  .expire = EXPIRE,
+                                                                  .minimum = MINIMUM,
+                                                          }}};
 
-    auto expected = dns_response<qtype::SOA>{
-            {{
-                     .id = RESPONSE_ID,
-                     .rd = 1,
-                     .qr = 1,
-                     .ad = 1,
-                     .ra = 1,
-                     .qdcount = 1,
-                     .ancount = 1,
-                     .nscount = 0,
-                     .arcount = 1,
-             },
-             {
-                     .qname = "example.com",
-                     .type = qtype::SOA,
-             }},
+    auto expected = dns_response{
+            {.header =
+                     {
+                             .id = RESPONSE_ID,
+                             .rd = 1,
+                             .qr = 1,
+                             .ad = 1,
+                             .ra = 1,
+                             .qdcount = 1,
+                             .ancount = 1,
+                             .nscount = 0,
+                             .arcount = 1,
+                     },
+             .question =
+                     {
+                             .qname = "example.com",
+                             .type = qtype::SOA,
+                     }},
             answers,
     };
 
