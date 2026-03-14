@@ -27,7 +27,7 @@ namespace tuposoft::asio::dns {
         std::uint16_t arcount{}; // Number of resource entries
     };
 
-    auto tie_dns_header(const dns_header &header);
+    auto dns_header_to_tuple(const dns_header &header);
 
     auto operator==(const dns_header &first, const dns_header &second) -> bool;
 
@@ -47,4 +47,4 @@ namespace tuposoft::asio::dns {
         Z_POSITION = 6U,
         RA_POSITION = 7U,
     };
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns
