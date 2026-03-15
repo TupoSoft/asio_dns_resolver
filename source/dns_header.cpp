@@ -13,13 +13,13 @@ namespace tuposoft::asio::dns {
                header.cd << CD_POSITION | header.ad << AD_POSITION | header.z << Z_POSITION | header.ra << RA_POSITION;
     }
 
-    auto tie_dns_header(const dns_header &header) {
-        return std::tie(header.id, *std::make_unique<std::uint16_t>(header_flags_to_short(header)), header.qdcount,
-                        header.ancount, header.nscount, header.arcount);
+    auto dns_header_to_tuple(const dns_header &header) {
+        return std::make_tuple(header.id, header_flags_to_short(header), header.qdcount, header.ancount, header.nscount,
+                               header.arcount);
     }
 
     auto operator==(const dns_header &first, const dns_header &second) -> bool {
-        return tie_dns_header(first) == tie_dns_header(second);
+        return dns_header_to_tuple(first) == dns_header_to_tuple(second);
     }
 
     auto operator>>(std::istream &input, dns_header &header) -> decltype(input) {
@@ -57,4 +57,4 @@ namespace tuposoft::asio::dns {
 
         return output;
     }
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns

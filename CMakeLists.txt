@@ -17,6 +17,7 @@ CPMAddPackage("gh:fmtlib/fmt#10.2.1")
 
 set(BOOST_INCLUDE_LIBRARIES "asio")
 set(BOOST_SKIP_INSTALL_RULES OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 CPMAddPackage(
         NAME Boost
         VERSION 1.85.0

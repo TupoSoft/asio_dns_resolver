@@ -37,4 +37,4 @@ namespace tuposoft::asio::dns {
 
         return input;
     }
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns

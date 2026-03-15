@@ -13,10 +13,10 @@ namespace tuposoft::asio::dns {
     class dns_transport {
     public:
         dns_transport() = default;
-        dns_transport(const dns_transport&) = default;
-        dns_transport(dns_transport&&) = default;
-        auto operator=(const dns_transport&) -> dns_transport& = default;
-        auto operator=(dns_transport&&) -> dns_transport& = default;
+        dns_transport(const dns_transport &) = default;
+        dns_transport(dns_transport &&) = default;
+        auto operator=(const dns_transport &) -> dns_transport & = default;
+        auto operator=(dns_transport &&) -> dns_transport & = default;
         virtual ~dns_transport() = default;
         virtual auto connect(asio::ip::udp::endpoint) -> asio::awaitable<void> = 0;
         virtual auto send(std::span<const std::byte>) -> asio::awaitable<void> = 0;
