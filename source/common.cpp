@@ -1,16 +1,26 @@
 #include "common.hpp"
 
 #include <ranges>
+#include <stdexcept>
+#include <unordered_set>
 
 namespace {
     auto calculate_new_position(std::istream &input, const std::uint16_t next_byte) -> std::uint16_t {
+        const auto low_byte = input.get();
+        if (low_byte == std::char_traits<char>::eof()) {
+            throw std::runtime_error("Truncated DNS compression pointer");
+        }
+
         return (next_byte & tuposoft::asio::dns::LOWER_SIX_BITS_MASK) << tuposoft::asio::dns::BYTE_SIZE |
-               static_cast<std::uint8_t>(input.get());
+               static_cast<std::uint8_t>(low_byte);
     }
 
     auto read_label_from_stream(std::istream &input, const std::uint8_t len) -> std::string {
         std::vector<char> buffer(len);
-        input.read(buffer.data(), len);
+        if (!input.read(buffer.data(), len)) {
+            throw std::runtime_error("Truncated DNS label");
+        }
+
         return std::string{buffer.begin(), buffer.end()} + '.';
     }
 } // namespace
@@ -48,18 +58,29 @@ auto tuposoft::asio::dns::from_dns_label_format(std::istream &input) -> std::str
     auto result = std::string{};
     constexpr auto UNSET_PTR_POS = -1;
     auto first_ptr_pos{UNSET_PTR_POS};
+    auto visited_pointer_targets = std::unordered_set<std::uint16_t>{};
 
-    for (auto next_byte = static_cast<std::uint8_t>(input.get()); next_byte != 0; next_byte = input.get()) {
+    for (auto next_byte = input.get(); next_byte != 0; next_byte = input.get()) {
+        if (next_byte == std::char_traits<char>::eof()) {
+            throw std::runtime_error("Unexpected end of DNS name");
+        }
+
         if ((next_byte & UPPER_TWO_BITS_MASK) != UPPER_TWO_BITS_MASK) {
-            result += read_label_from_stream(input, next_byte);
+            result += read_label_from_stream(input, static_cast<std::uint8_t>(next_byte));
         } else {
             const auto next_pos = calculate_new_position(input, next_byte);
+
+            if (!visited_pointer_targets.insert(next_pos).second) {
+                throw std::runtime_error("DNS compression pointer cycle");
+            }
 
             if (first_ptr_pos == UNSET_PTR_POS) {
                 first_ptr_pos = static_cast<int>(input.tellg());
             }
 
-            input.seekg(next_pos);
+            if (!input.seekg(next_pos)) {
+                throw std::runtime_error("Invalid DNS compression pointer target");
+            }
         }
     }
 
@@ -67,7 +88,9 @@ auto tuposoft::asio::dns::from_dns_label_format(std::istream &input) -> std::str
         input.seekg(first_ptr_pos);
     }
 
-    result.pop_back();
+    if (!result.empty()) {
+        result.pop_back();
+    }
 
     return result;
 }
