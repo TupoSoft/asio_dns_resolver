@@ -5,72 +5,29 @@
 #include "soa_rdata.hpp"
 
 #include <tuple>
+#include <variant>
 
 namespace tuposoft::asio::dns {
-    template<qtype>
-    struct rdata {
-        using type = std::string;
-    };
+    using rdata_value = std::variant<std::string, mx_rdata, soa_rdata, std::vector<std::uint8_t>>;
 
-    template<>
-    struct rdata<qtype::MX> {
-        using type = mx_rdata;
-    };
-
-    template<>
-    struct rdata<qtype::SOA> {
-        using type = soa_rdata;
-    };
-
-    template<qtype T>
     struct dns_answer {
         std::string name;
-        qtype type{T};
+        qtype type{};
         std::uint16_t cls{};
         std::uint32_t ttl{};
         std::uint16_t rdlength{};
-        rdata<T>::type rdata;
+        rdata_value rdata;
     };
 
-    template<qtype T>
-    auto parse_rdata(std::istream &input) -> rdata<T>::type {
-        return from_dns_label_format(input);
+    auto parse_rdata(std::istream &input, qtype type, std::uint16_t cls, std::uint16_t rdlength) -> rdata_value;
+
+    auto operator>>(std::istream &input, dns_answer &answer) -> std::istream &;
+
+    inline auto tie_dns_answer(const dns_answer &answer) {
+        return std::tie(answer.name, answer.type, answer.cls, answer.ttl, answer.rdlength, answer.rdata);
     }
 
-    template<>
-    auto parse_rdata<qtype::MX>(std::istream &input) -> rdata<qtype::MX>::type;
-
-    template<>
-    auto parse_rdata<qtype::A>(std::istream &input) -> rdata<qtype::A>::type;
-
-    template<>
-    auto parse_rdata<qtype::AAAA>(std::istream &input) -> rdata<qtype::AAAA>::type;
-
-    template<>
-    auto parse_rdata<qtype::SOA>(std::istream &input) -> rdata<qtype::SOA>::type;
-
-    template<>
-    auto parse_rdata<qtype::TXT>(std::istream &input) -> rdata<qtype::TXT>::type;
-
-    template<qtype T>
-    auto operator>>(std::istream &input, dns_answer<T> &answer) -> decltype(input) {
-        answer.name = from_dns_label_format(input);
-        answer.type = static_cast<qtype>(read_big_endian<std::uint16_t>(input));
-        answer.cls = read_big_endian<std::uint16_t>(input);
-        answer.ttl = read_big_endian<std::uint32_t>(input);
-        answer.rdlength = read_big_endian<std::uint16_t>(input);
-        answer.rdata = parse_rdata<T>(input);
-
-        return input;
-    };
-
-    template<qtype T>
-    auto tie_dns_answer(const dns_answer<T> &answer) {
-        return std::tie(answer.name, answer.type, answer.cls, answer.ttl, answer.rdlength, answer.rdata);
-    };
-
-    template<qtype T>
-    auto operator==(const dns_answer<T> &first, const dns_answer<T> &second) -> bool {
+    inline auto operator==(const dns_answer &first, const dns_answer &second) -> bool {
         return tie_dns_answer(first) == tie_dns_answer(second);
-    };
+    }
 } // namespace tuposoft::asio::dns

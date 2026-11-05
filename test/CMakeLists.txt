@@ -3,7 +3,7 @@ include(../cmake/project.cmake)
 cmake_minimum_required(VERSION ${CMAKE_MINIMUM_REQUIRED_VERSION})
 project(${TEST_PROJECT_NAME} VERSION ${PROJECT_VERSION})
 
-if (${WIN32})
+if (WIN32)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 endif ()
 

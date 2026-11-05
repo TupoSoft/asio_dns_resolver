@@ -4,37 +4,34 @@
 #include "dns_query.hpp"
 
 #include <iostream>
+#include <utility>
 
 namespace tuposoft::asio::dns {
-    template<qtype T>
     struct dns_response : dns_query {
-        std::vector<dns_answer<T>> answers;
+        std::vector<dns_answer> answers;
     };
 
-    template<qtype T>
-    auto tie_dns_response(const dns_response<T> &response) {
+    inline auto tie_dns_response(const dns_response &response) {
         return std::tie(response.header, response.question, response.answers);
     }
 
-    template<qtype T>
-    auto operator==(const dns_response<T> &first, const dns_response<T> &second) -> bool {
+    inline auto operator==(const dns_response &first, const dns_response &second) -> bool {
         return tie_dns_response(first) == tie_dns_response(second);
     }
 
-    template<qtype T>
-    auto operator>>(std::istream &input, dns_response<T> &response) -> decltype(input) {
-        input >> response.header;
-        input >> response.question;
+    inline auto operator>>(std::istream &input, dns_response &response) -> decltype(input) {
+        auto parsed = dns_response{};
+        input >> parsed.header;
+        input >> parsed.question;
 
-        const auto ancount = response.header.ancount;
-        response.answers = std::vector<dns_answer<T>>(ancount);
-
-        for (int i = 0; i < ancount; ++i) {
-            auto answer = dns_answer<T>{};
+        parsed.answers.reserve(parsed.header.ancount);
+        for (std::uint16_t i = 0; i < parsed.header.ancount; ++i) {
+            auto answer = dns_answer{};
             input >> answer;
-            response.answers[i] = answer;
+            parsed.answers.push_back(std::move(answer));
         }
 
+        response = std::move(parsed);
         return input;
     }
 } // namespace tuposoft::asio::dns

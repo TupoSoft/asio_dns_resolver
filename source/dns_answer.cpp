@@ -1,55 +1,121 @@
 #include "dns_answer.hpp"
+#include "qclass.hpp"
+
+#include <utility>
 
 using namespace tuposoft::asio::dns;
 
-template<>
-auto tuposoft::asio::dns::parse_rdata<qtype::MX>(std::istream &input) -> rdata<qtype::MX>::type {
-    return {.preference = read_big_endian<std::uint16_t>(input), .mx = from_dns_label_format(input)};
-}
+namespace {
+    auto rdata_end(std::istream &input, const std::uint16_t length) -> std::streampos {
+        const auto start = input.tellg();
+        if (start == std::streampos{-1} || !input.seekg(0, std::ios::end)) {
+            throw std::runtime_error("DNS parsing requires a seekable message");
+        }
 
-template<>
-auto tuposoft::asio::dns::parse_rdata<qtype::A>(std::istream &input) -> rdata<qtype::A>::type {
-    constexpr auto IPV4_SIZE = 4;
+        if (const auto message_end = input.tellg();
+            !input.seekg(start) || message_end == std::streampos{-1} || length > message_end - start) {
+            throw std::runtime_error("Truncated DNS RDATA");
+        }
 
-    auto binary_ipv4 = std::array<char, IPV4_SIZE>{};
-    input.read(binary_ipv4.data(), binary_ipv4.size());
+        return start + static_cast<std::streamoff>(length);
+    }
 
-    auto str_ipv4 = std::array<char, INET_ADDRSTRLEN>{};
-    inet_ntop(AF_INET, binary_ipv4.data(), str_ipv4.data(), str_ipv4.size());
+    auto read_bytes(std::istream &input, char *buffer, const std::streamsize length, const std::streampos end)
+            -> void {
+        require_dns_bytes(input, length, end);
+        if (length != 0 && !input.read(buffer, length)) {
+            throw std::runtime_error("Truncated DNS RDATA");
+        }
+    }
 
-    return str_ipv4.data();
-}
+    template<typename Address>
+    auto read_address(std::istream &input, const std::uint16_t length, const std::streampos end) -> std::string {
+        auto bytes = typename Address::bytes_type{};
+        if (length != bytes.size()) {
+            throw std::runtime_error("Invalid DNS address RDATA length");
+        }
 
-template<>
-auto tuposoft::asio::dns::parse_rdata<qtype::AAAA>(std::istream &input) -> rdata<qtype::AAAA>::type {
-    constexpr auto IPV6_SIZE = 16;
+        for (auto &byte: bytes) {
+            byte = read_big_endian<std::uint8_t>(input, end);
+        }
+        return Address{bytes}.to_string();
+    }
+} // namespace
 
-    auto binary_ipv6 = std::array<char, IPV6_SIZE>{};
-    input.read(binary_ipv6.data(), binary_ipv6.size());
+auto tuposoft::asio::dns::parse_rdata(std::istream &input, const qtype type, const std::uint16_t cls,
+                                    const std::uint16_t rdlength) -> rdata_value {
+    const auto end = rdata_end(input, rdlength);
+    const auto decode = [&] -> rdata_value {
+        if (cls == std::to_underlying(qclass::INET)) {
+            switch (type) {
+                case qtype::A:
+                    return read_address<boost::asio::ip::address_v4>(input, rdlength, end);
+                case qtype::AAAA:
+                    return read_address<boost::asio::ip::address_v6>(input, rdlength, end);
+                case qtype::CNAME:
+                case qtype::NS:
+                case qtype::PTR:
+                    return from_dns_label_format(input, end);
+                case qtype::MX:
+                    return mx_rdata{
+                            .preference = read_big_endian<std::uint16_t>(input, end),
+                            .mx = from_dns_label_format(input, end),
+                    };
+                case qtype::SOA:
+                    return soa_rdata{
+                            .mname = from_dns_label_format(input, end),
+                            .rname = from_dns_label_format(input, end),
+                            .serial = read_big_endian<std::uint32_t>(input, end),
+                            .refresh = read_big_endian<std::uint32_t>(input, end),
+                            .retry = read_big_endian<std::uint32_t>(input, end),
+                            .expire = read_big_endian<std::uint32_t>(input, end),
+                            .minimum = read_big_endian<std::uint32_t>(input, end),
+                    };
+                case qtype::TXT: {
+                    if (rdlength == 0) {
+                        throw std::runtime_error("Empty DNS TXT RDATA");
+                    }
 
-    auto str_ipv6 = std::array<char, INET6_ADDRSTRLEN>{};
-    inet_ntop(AF_INET6, binary_ipv6.data(), str_ipv6.data(), str_ipv6.size());
+                    auto text = std::string{};
+                    while (input.tellg() < end) {
+                        const auto length = read_big_endian<std::uint8_t>(input, end);
+                        auto part = std::string(length, '\0');
+                        read_bytes(input, part.data(), length, end);
+                        text += part;
+                    }
+                    return text;
+                }
+                default:
+                    break;
+            }
+        }
 
-    return str_ipv6.data();
-}
+        auto bytes = std::vector<std::uint8_t>(rdlength);
+        for (auto &byte: bytes) {
+            byte = read_big_endian<std::uint8_t>(input, end);
+        }
 
-template<>
-auto tuposoft::asio::dns::parse_rdata<qtype::SOA>(std::istream &input) -> rdata<qtype::SOA>::type {
-    return {
-            .mname = from_dns_label_format(input),
-            .rname = from_dns_label_format(input),
-            .serial = read_big_endian<std::uint32_t>(input),
-            .refresh = read_big_endian<std::uint32_t>(input),
-            .retry = read_big_endian<std::uint32_t>(input),
-            .expire = read_big_endian<std::uint32_t>(input),
-            .minimum = read_big_endian<std::uint32_t>(input),
+        return bytes;
     };
+
+    auto result = decode();
+    if (input.tellg() != end) {
+        throw std::runtime_error("DNS RDATA length does not match decoded data");
+    }
+
+    return result;
 }
 
-template<>
-auto tuposoft::asio::dns::parse_rdata<qtype::TXT>(std::istream &input) -> rdata<qtype::TXT>::type {
-    const auto txt_length = input.get();
-    auto buffer = std::vector<char>(txt_length);
-    input.read(buffer.data(), txt_length);
-    return {buffer.begin(), buffer.end()};
+auto tuposoft::asio::dns::operator>>(std::istream &input, dns_answer &answer) -> std::istream & {
+    auto parsed = dns_answer{};
+
+    parsed.name = from_dns_label_format(input);
+    parsed.type = static_cast<qtype>(read_big_endian<std::uint16_t>(input));
+    parsed.cls = read_big_endian<std::uint16_t>(input);
+    parsed.ttl = read_big_endian<std::uint32_t>(input);
+    parsed.rdlength = read_big_endian<std::uint16_t>(input);
+    parsed.rdata = parse_rdata(input, parsed.type, parsed.cls, parsed.rdlength);
+    answer = std::move(parsed);
+
+    return input;
 }
