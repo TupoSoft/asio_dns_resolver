@@ -22,7 +22,7 @@ namespace tuposoft::asio::dns {
     auto from_dns_label_format(std::istream &input, std::optional<std::streampos> end = std::nullopt) -> std::string;
 
     auto require_dns_bytes(std::istream &input, std::streamsize count,
-                           std::optional<std::streampos> end = std::nullopt) -> void;
+                           const std::optional<std::streampos> &end = std::nullopt) -> void;
 
     template<typename T = std::uint16_t>
     auto read_big_endian(std::istream &input, std::optional<std::streampos> end = std::nullopt) -> T {

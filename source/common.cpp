@@ -6,7 +6,7 @@
 
 namespace {
     auto calculate_new_position(std::istream &input, const std::uint16_t next_byte,
-                                const std::optional<std::streampos> end) -> std::uint16_t {
+                                const std::optional<std::streampos> &end) -> std::uint16_t {
         tuposoft::asio::dns::require_dns_bytes(input, 1, end);
         const auto low_byte = input.get();
 
@@ -14,8 +14,11 @@ namespace {
             throw std::runtime_error("Truncated DNS compression pointer");
         }
 
-        return (next_byte & tuposoft::asio::dns::LOWER_SIX_BITS_MASK) << tuposoft::asio::dns::BYTE_SIZE |
-               static_cast<std::uint8_t>(low_byte);
+        const auto low = static_cast<unsigned>(low_byte);
+        const auto high = static_cast<unsigned>(next_byte);
+
+        return static_cast<std::uint16_t>(
+                (high & tuposoft::asio::dns::LOWER_SIX_BITS_MASK) << tuposoft::asio::dns::BYTE_SIZE | low);
     }
 
     auto read_label_from_stream(std::istream &input, const std::uint8_t len, const std::optional<std::streampos> end)
@@ -61,7 +64,7 @@ auto tuposoft::asio::dns::to_dns_label_format(const std::string &domain) -> std:
 }
 
 auto tuposoft::asio::dns::require_dns_bytes(std::istream &input, const std::streamsize count,
-                                            const std::optional<std::streampos> end) -> void {
+                                            const std::optional<std::streampos> &end) -> void {
     if (end) {
         if (const auto position = input.tellg();
             position == std::streampos{-1} || position > *end || count > *end - position) {
@@ -85,8 +88,7 @@ auto tuposoft::asio::dns::from_dns_label_format(std::istream &input, std::option
             break;
         }
 
-        if (const auto next_byte_u = static_cast<std::uint8_t>(next_byte);
-            (next_byte_u & UPPER_TWO_BITS_MASK) == 0) {
+        if (const auto next_byte_u = static_cast<std::uint8_t>(next_byte); (next_byte_u & UPPER_TWO_BITS_MASK) == 0) {
             result += read_label_from_stream(input, next_byte_u, end);
         } else if ((next_byte_u & UPPER_TWO_BITS_MASK) == UPPER_TWO_BITS_MASK) {
             const auto next_pos = calculate_new_position(input, next_byte_u, end);

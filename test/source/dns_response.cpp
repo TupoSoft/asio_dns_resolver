@@ -216,28 +216,36 @@ TEST(dns_response, decodes_cname_before_a_aaaa_and_mx) {
         rdata_value expected;
     };
 
-    for (const auto &test:
-         std::vector<test_case>{{qtype::A, "\300\000\002\001"sv, std::string{"192.0.2.1"}},
-                                {qtype::AAAA, "\040\001\015\270\000\000\000\000\000\000\000\000\000\000\000\001"sv,
-                                 std::string{"2001:db8::1"}},
-                                {qtype::MX, "\000\012\004mail\300\055"sv, mx_rdata{10, "mail.target.example.com"}}}) {
-        SCOPED_TRACE(static_cast<unsigned>(test.type));
-        const auto wire = mixed_response(test.type, test.data);
+    for (const auto &[type, data, expected]: std::vector<test_case>{
+                 {.type = qtype::A, .data = "\300\000\002\001"sv, .expected = std::string{"192.0.2.1"}},
+                 {
+                         .type = qtype::AAAA,
+                         .data = "\040\001\015\270\000\000\000\000\000\000\000\000\000\000\000\001"sv,
+                         .expected = std::string{"2001:db8::1"},
+                 },
+                 {
+                         .type = qtype::MX,
+                         .data = "\000\012\004mail\300\055"sv,
+                         .expected = mx_rdata{.preference = 10, .mx = "mail.target.example.com"},
+                 },
+         }) {
+        SCOPED_TRACE(std::to_underlying(type));
+        const auto wire = mixed_response(type, data);
         auto input = std::istringstream{wire, std::ios::binary};
         auto actual = dns_response{};
 
         input >> actual;
 
-        EXPECT_EQ(test.type, actual.question.type);
+        EXPECT_EQ(type, actual.question.type);
         ASSERT_EQ(2, actual.answers.size());
         EXPECT_EQ("www.example.com", actual.answers[0].name);
         EXPECT_EQ(qtype::CNAME, actual.answers[0].type);
         EXPECT_EQ(9, actual.answers[0].rdlength);
         EXPECT_EQ("target.example.com", std::get<std::string>(actual.answers[0].rdata));
         EXPECT_EQ("target.example.com", actual.answers[1].name);
-        EXPECT_EQ(test.type, actual.answers[1].type);
-        EXPECT_EQ(test.data.size(), actual.answers[1].rdlength);
-        EXPECT_EQ(test.expected, actual.answers[1].rdata);
+        EXPECT_EQ(type, actual.answers[1].type);
+        EXPECT_EQ(data.size(), actual.answers[1].rdlength);
+        EXPECT_EQ(expected, actual.answers[1].rdata);
         EXPECT_EQ(static_cast<std::streamoff>(wire.size()), input.tellg());
     }
 }
