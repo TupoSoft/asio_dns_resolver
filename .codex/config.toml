@@ -1,0 +1,5 @@
+  [mcp_servers.clion]
+    url = "http://127.0.0.1:64362/stream"
+
+    [mcp_servers.clion.env_http_headers]
+      IJ_MCP_LAUNCH_ORIGIN = "IJ_MCP_LAUNCH_ORIGIN"

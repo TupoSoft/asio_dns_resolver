@@ -30,7 +30,7 @@ namespace tuposoft::asio::dns {
         }
 
         template<qtype T>
-        auto query(const std::string domain) -> asio::awaitable<std::vector<dns_answer<T>>> {
+        auto query(const std::string domain) -> asio::awaitable<std::vector<dns_answer>> {
             static constexpr auto timeout_seconds = std::chrono::seconds(3);
             static constexpr auto input_buffer_size = 2048;
             static constexpr auto max_retry_count = 10;
@@ -59,7 +59,7 @@ namespace tuposoft::asio::dns {
                     throw std::runtime_error(fmt::format("UDP receive failed: {}", error_code.message()));
                 }
 
-                auto dns_response = tuposoft::asio::dns::dns_response<T>{};
+                auto dns_response = tuposoft::asio::dns::dns_response{};
 
                 auto chars = input | std::views::take(received) | std::views::transform([](const std::byte byte) -> auto {
                                  return static_cast<char>(std::to_integer<unsigned char>(byte));
