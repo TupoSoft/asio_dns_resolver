@@ -7,7 +7,7 @@
 
 #include "dns_transport.hpp"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <array>
 #include <cstddef>

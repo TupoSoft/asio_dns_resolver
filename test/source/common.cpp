@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <span>
+#include <sstream>
+#include <stdexcept>
 
 using namespace tuposoft::asio::dns;
 
@@ -65,4 +67,82 @@ TEST(common, parse_pointer_2) {
     input.seekg(static_cast<unsigned>(expected_2_pos));
     const auto actual_2 = from_dns_label_format(input);
     ASSERT_EQ(EXPECTED_2, actual_2);
+}
+
+TEST(common, rejects_self_referencing_pointer) {
+    auto input = std::istringstream{std::string{"\xC0\x00", 2}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_pointer_cycle) {
+    auto input = std::istringstream{std::string{"\xC0\x02\xC0\x00", 4}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_empty_name_input) {
+    auto input = std::istringstream{std::string{}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_incomplete_pointer) {
+    auto input = std::istringstream{std::string{"\xC0", 1}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_truncated_label) {
+    auto input = std::istringstream{std::string{"\x03\x61", 2}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_name_without_terminator) {
+    auto input = std::istringstream{std::string{"\x01\x61", 2}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, rejects_pointer_cycle_through_label) {
+    auto input = std::istringstream{std::string{"\x01\x61\xC0\x00", 4}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, parse_pointer_chain) {
+    auto input = std::istringstream{std::string{"\x01\x61\x00\xC0\x00\xC0\x03\x2A", 8}, std::ios::binary};
+    input.seekg(5);
+
+    EXPECT_EQ("a", from_dns_label_format(input));
+    EXPECT_EQ(7, input.tellg());
+    EXPECT_EQ(0x2A, input.get());
+}
+
+TEST(common, rejects_pointer_past_input) {
+    auto input = std::istringstream{std::string{"\xC0\x03", 2}, std::ios::binary};
+
+    EXPECT_THROW(from_dns_label_format(input), std::runtime_error);
+}
+
+TEST(common, parse_root_name) {
+    auto input = std::istringstream{std::string{"\x00\x2A", 2}, std::ios::binary};
+
+    const auto actual = from_dns_label_format(input);
+
+    EXPECT_TRUE(actual.empty());
+    EXPECT_EQ(1, input.tellg());
+    EXPECT_EQ(0x2A, input.get());
+}
+
+TEST(common, parse_compressed_root_name) {
+    auto input = std::istringstream{std::string{"\x00\xC0\x00\x2A", 4}, std::ios::binary};
+    input.seekg(1);
+
+    const auto actual = from_dns_label_format(input);
+
+    EXPECT_TRUE(actual.empty());
+    EXPECT_EQ(3, input.tellg());
+    EXPECT_EQ(0x2A, input.get());
 }

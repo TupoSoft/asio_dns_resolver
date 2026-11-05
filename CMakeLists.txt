@@ -13,7 +13,12 @@ endif ()
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 
-CPMAddPackage("gh:fmtlib/fmt#10.2.1")
+CPMAddPackage(
+        NAME fmt
+        GITHUB_REPOSITORY fmtlib/fmt
+        GIT_TAG 12.2.0
+        OPTIONS "FMT_INSTALL ON"
+)
 
 set(BOOST_INCLUDE_LIBRARIES "asio")
 set(BOOST_SKIP_INSTALL_RULES OFF)
@@ -45,5 +50,5 @@ packageProject(
         INCLUDE_HEADER_PATTERN "resolver.h"
         INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
         EXPORT_HEADER "${PROJECT_NAME}/export.h"
-        DEPENDENCIES "fmt 10.2.1;boost 1.85.0"
+        DEPENDENCIES "fmt 12.2.0;boost 1.85.0"
 )

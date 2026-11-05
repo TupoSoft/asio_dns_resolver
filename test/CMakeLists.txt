@@ -24,4 +24,4 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAMESPACE}::${BASE_PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 include(GoogleTest)
-gtest_discover_tests(${PROJECT_NAME})
+gtest_discover_tests(${PROJECT_NAME} PROPERTIES TIMEOUT 5)
