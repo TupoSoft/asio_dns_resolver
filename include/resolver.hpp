@@ -24,10 +24,7 @@ namespace tuposoft::asio::dns {
         explicit resolver(const asio::any_io_executor &executor);
         explicit resolver(std::shared_ptr<dns_transport> transport) : transport_(std::move(transport)) {}
 
-        auto connect(const std::string server) const -> asio::awaitable<void> {
-            constexpr auto DNS_PORT = 53;
-            co_await transport_->connect({asio::ip::address::from_string(server), DNS_PORT});
-        }
+        auto connect(std::string server) const -> asio::awaitable<void>;
 
         template<qtype T>
         auto query(const std::string domain) -> asio::awaitable<std::vector<dns_answer>> {
@@ -45,9 +42,9 @@ namespace tuposoft::asio::dns {
 
             auto input = std::array<std::byte, input_buffer_size>{};
             auto curr_retry_count = 0;
-            while (curr_retry_count < max_retry_count) {
+            while (curr_retry_count++ < max_retry_count) {
                 co_await transport_->send(outgoing);
-                ++curr_retry_count;
+
                 auto [error_code, received] = co_await transport_->receive(
                         input, std::chrono::duration_cast<std::chrono::milliseconds>(timeout_seconds));
 
@@ -59,15 +56,21 @@ namespace tuposoft::asio::dns {
                     throw std::runtime_error(fmt::format("UDP receive failed: {}", error_code.message()));
                 }
 
-                auto dns_response = tuposoft::asio::dns::dns_response{};
+                auto response = dns_response{};
 
-                auto chars = input | std::views::take(received) | std::views::transform([](const std::byte byte) -> auto {
-                                 return static_cast<char>(std::to_integer<unsigned char>(byte));
-                             });
+                auto chars =
+                        input | std::views::take(received) | std::views::transform([](const std::byte byte) -> auto {
+                            return static_cast<char>(std::to_integer<unsigned char>(byte));
+                        });
 
                 auto instream = std::istringstream{std::string{chars.begin(), chars.end()}, std::ios::binary};
-                instream >> dns_response;
-                co_return dns_response.answers;
+                instream >> response;
+
+                if (response != query) {
+                    throw std::runtime_error("Query-Response Mismatch. See RFC5452 #9.1");
+                }
+
+                co_return response.answers;
             }
 
             throw std::runtime_error(fmt::format("Timeout while waiting for UDP response"));
@@ -78,54 +81,46 @@ namespace tuposoft::asio::dns {
 
         template<qtype T>
         auto create_query(const std::string &name) {
-            return dns_query{.header =
-                                     {
-                                             .id = generate_id(),
-                                             .rd = 0x01,
-                                             .qdcount = 0x01,
-                                     },
-                             .question = {
-                                     .qname = name,
-                                     .type = T,
-                                     .cls = qclass::INET,
-                             }};
+            return dns_query{
+                    .header =
+                            {
+                                    .id = generate_id(),
+                                    .rd = 0x01,
+                                    .qdcount = 0x01,
+                            },
+                    .question =
+                            {
+                                    .qname = name,
+                                    .type = T,
+                                    .cls = qclass::INET,
+                            },
+            };
         }
 
-        static auto reverse_qname(const std::string &name) -> std::string {
-            auto iss = std::istringstream{name};
-            auto segment = std::string{};
-            auto segments = std::vector<std::string>{};
-
-            while (std::getline(iss, segment, '.')) {
-                segments.push_back(segment);
-            }
-
-            std::ranges::reverse(segments);
-
-            auto reversed_ip = std::string{};
-            for (const auto &seg: segments) {
-                reversed_ip += seg + '.';
-            }
-
-            return reversed_ip;
-        }
+        static auto reverse_qname(const std::string &name) -> std::string;
 
         std::shared_ptr<dns_transport> transport_;
     };
 
     template<>
     inline auto resolver::create_query<qtype::PTR>(const std::string &name) {
-        const auto qname = reverse_qname(name) + "in-addr.arpa";
-        return dns_query{.header =
-                                 {
-                                         .id = generate_id(),
-                                         .rd = 0x01,
-                                         .qdcount = 0x01,
-                                 },
-                         .question = {
-                                 .qname = qname,
-                                 .type = qtype::PTR,
-                                 .cls = qclass::INET,
-                         }};
+        static constexpr auto REVERSE_LOOKUP_DOMAIN = "in-addr.arpa";
+
+        const auto qname = reverse_qname(name) + REVERSE_LOOKUP_DOMAIN;
+
+        return dns_query{
+                .header =
+                        {
+                                .id = generate_id(),
+                                .rd = 0x01,
+                                .qdcount = 0x01,
+                        },
+                .question =
+                        {
+                                .qname = qname,
+                                .type = qtype::PTR,
+                                .cls = qclass::INET,
+                        },
+        };
     }
 } // namespace tuposoft::asio::dns

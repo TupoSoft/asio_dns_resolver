@@ -4,6 +4,7 @@
 
 namespace tuposoft::asio::dns {
     enum struct qtype : std::uint16_t { // NOLINT(*-enum-size)
+        RESERVED = 0, // Reserved
         A = 1, // IPv4 address record
         NS = 2, // Delegates a DNS zone to use the given authoritative name servers
         CNAME = 5, // Canonical name record
