@@ -10,6 +10,10 @@ auto resolver::connect(const std::string server) const -> asio::awaitable<void> 
     co_await transport_->connect({asio::ip::address::from_string(server), DNS_PORT});
 }
 
+auto resolver::response_matches_query(const dns_response &response, const dns_query &query) -> bool {
+    return response.header.id == query.header.id && response.question == query.question;
+}
+
 auto resolver::generate_id() -> decltype(generate_id()) {
     static std::random_device rand;
     static std::mt19937 gen(rand());

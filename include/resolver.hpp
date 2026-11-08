@@ -66,7 +66,7 @@ namespace tuposoft::asio::dns {
                 auto instream = std::istringstream{std::string{chars.begin(), chars.end()}, std::ios::binary};
                 instream >> response;
 
-                if (response != query) {
+                if (!response_matches_query(response, query)) {
                     throw std::runtime_error("Query-Response Mismatch. See RFC5452 #9.1");
                 }
 
@@ -77,6 +77,8 @@ namespace tuposoft::asio::dns {
         }
 
     private:
+        static auto response_matches_query(const dns_response& response, const dns_query& query) -> bool;
+
         static auto generate_id() -> std::uint16_t;
 
         template<qtype T>
