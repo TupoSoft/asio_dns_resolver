@@ -3,7 +3,6 @@
 #include "dns_answer.hpp"
 #include "dns_query.hpp"
 
-#include <iostream>
 #include <utility>
 
 namespace tuposoft::asio::dns {
@@ -21,10 +20,12 @@ namespace tuposoft::asio::dns {
 
     inline auto operator>>(std::istream &input, dns_response &response) -> decltype(input) {
         auto parsed = dns_response{};
+
         input >> parsed.header;
         input >> parsed.question;
 
         parsed.answers.reserve(parsed.header.ancount);
+
         for (std::uint16_t i = 0; i < parsed.header.ancount; ++i) {
             auto answer = dns_answer{};
             input >> answer;
