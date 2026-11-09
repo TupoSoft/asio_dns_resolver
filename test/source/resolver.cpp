@@ -182,5 +182,24 @@ TEST_F(resolver_test, malformed_response_propagates_parser_exception) {
 
     context_.run();
 
-    EXPECT_THROW(result.get(), std::runtime_error);
+    EXPECT_THAT([&result] -> void { result.get(); }, ThrowsMessage<std::runtime_error>(StrEq("Truncated DNS RDATA")));
+}
+
+TEST_F(resolver_test, response_query_mismatch_propagates_exception) {
+    static constexpr auto raw = std::span{"\000\174\201\200\000\001\000\002\000\000\000\000"
+                                          "\003www\007example\003com\000\000\001\000\001"
+                                          "\300\014\000\005\000\001\000\000\000\074\000\011\006target\300\020"
+                                          "\300\055\000\001\000\001\000\000\000\074\000\004\300\000\002"};
+
+    const auto transport = std::make_shared<mock_dns_transport>();
+
+    EXPECT_CALL(*transport, send(_)).WillOnce(Invoke([] -> auto { return ok(); }));
+    EXPECT_CALL(*transport, receive(_, _)).WillOnce(Invoke([](auto dst, auto) -> auto { return recv_with(raw, dst); }));
+
+    auto resolv = resolver{transport, [] -> auto { return test_query_id; }};
+    auto result = co_spawn(context_, resolv.query<qtype::A>("www.example.com"), use_future);
+
+    context_.run();
+
+    EXPECT_THAT([&result] -> void { result.get(); }, ThrowsMessage<std::runtime_error>(StrEq("Query-Response Mismatch. See RFC5452 #9.1")));
 }
