@@ -21,8 +21,11 @@ namespace tuposoft::asio::dns {
     namespace asio = boost::asio;
     class resolver {
     public:
+        using id_generator = std::function<std::uint16_t()>;
+
         explicit resolver(const asio::any_io_executor &executor);
-        explicit resolver(std::shared_ptr<dns_transport> transport) : transport_(std::move(transport)) {}
+        explicit resolver(std::shared_ptr<dns_transport> transport, id_generator generator = &resolver::generate_id) :
+            transport_(std::move(transport)), generate_id_(std::move(generator)) {}
 
         auto connect(std::string server) const -> asio::awaitable<void>;
 
@@ -77,7 +80,7 @@ namespace tuposoft::asio::dns {
         }
 
     private:
-        static auto response_matches_query(const dns_response& response, const dns_query& query) -> bool;
+        static auto response_matches_query(const dns_response &response, const dns_query &query) -> bool;
 
         static auto generate_id() -> std::uint16_t;
 
@@ -86,7 +89,7 @@ namespace tuposoft::asio::dns {
             return dns_query{
                     .header =
                             {
-                                    .id = generate_id(),
+                                    .id = generate_id_(),
                                     .rd = 0x01,
                                     .qdcount = 0x01,
                             },
@@ -102,6 +105,8 @@ namespace tuposoft::asio::dns {
         static auto reverse_qname(const std::string &name) -> std::string;
 
         std::shared_ptr<dns_transport> transport_;
+
+        id_generator generate_id_;
     };
 
     template<>
@@ -113,7 +118,7 @@ namespace tuposoft::asio::dns {
         return dns_query{
                 .header =
                         {
-                                .id = generate_id(),
+                                .id = generate_id_(),
                                 .rd = 0x01,
                                 .qdcount = 0x01,
                         },

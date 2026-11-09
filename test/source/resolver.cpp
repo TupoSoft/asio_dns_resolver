@@ -8,6 +8,8 @@ using namespace boost::asio;
 using namespace testing;
 
 namespace {
+    constexpr std::uint16_t test_query_id = 123;
+
     auto ok() -> awaitable<void> { co_return; }
 
     auto recv_with(const std::span<const char> chars, std::span<std::byte> dst)
@@ -17,9 +19,7 @@ namespace {
         std::copy_n(bytes.begin(), size, dst.begin());
         co_return std::pair{boost::system::error_code{}, size};
     }
-} // namespace
 
-namespace {
     class resolver_test : public Test {
     protected:
         io_context context_;
@@ -33,6 +33,7 @@ namespace {
         template<qtype T>
         auto query_test(std::tuple<std::string, std::size_t, std::vector<rdata_value>, std::span<const char>> data)
                 -> awaitable<void> {
+
             auto [name, size, expected, raw] = data;
             const auto transport = std::make_shared<mock_dns_transport>();
 
@@ -42,7 +43,7 @@ namespace {
                 return recv_with(raw, dst);
             }));
 
-            auto resolv = resolver{transport};
+            auto resolv = resolver{transport, [] -> std::uint16_t { return test_query_id; }};
             co_await resolv.connect("1.1.1.1");
             const auto result = co_await resolv.query<T>(name);
 
@@ -57,9 +58,10 @@ namespace {
 } // namespace
 
 TEST_F(resolver_test, a) {
-    constexpr auto recv = std::span<const char>{
-            "[N\201\200\000\001\000\002\000\000\000\000\aexample\003com\000\000\001\000\001\300\f\000\001\000\001\000"
-            "\000\0008\000\004h\022\032x\300\f\000\001\000\001\000\000\0008\000\004h\022\033x"};
+    constexpr auto recv =
+            std::span<const char>{"\000\173\201\200\000\001\000\002\000\000\000\000\aexample\003com\000\000\001\000\001"
+                                  "\300\f\000\001\000\001\000"
+                                  "\000\0008\000\004h\022\032x\300\f\000\001\000\001\000\000\0008\000\004h\022\033x"};
 
     co_spawn(context_, query_test<qtype::A>({"example.com", 2, {"104.18.26.120", "104.18.27.120"}, recv}),
              check_completion);
@@ -74,13 +76,13 @@ TEST_F(resolver_test, mx) {
     static constexpr auto gmail_preference = 5;
     static constexpr auto alt1_preference = 10;
 
-    static constexpr auto recv =
-            std::span<const char>{"Lw\201\200\000\001\000\005\000\000\000\000\005gmail\003com\000\000\017\000\001\300\f"
-                                  "\000\017\000\001\000\000\003\024\000\033\000\005\rgmail-smtp-"
-                                  "in\001l\006google\300\022\300\f\000\017\000\001\000\000\003\024\000\t\000\036\004alt"
-                                  "3\300)\300\f\000\017\000\001\000\000\003\024\000\t\000\n\004alt1\300)"
-                                  "\300\f\000\017\000\001\000\000\003\024\000\t\000\024\004alt2\300)"
-                                  "\300\f\000\017\000\001\000\000\003\024\000\t\000(\004alt4\300)"};
+    static constexpr auto recv = std::span<const char>{
+            "\000\173\201\200\000\001\000\005\000\000\000\000\005gmail\003com\000\000\017\000\001\300\f"
+            "\000\017\000\001\000\000\003\024\000\033\000\005\rgmail-smtp-"
+            "in\001l\006google\300\022\300\f\000\017\000\001\000\000\003\024\000\t\000\036\004alt"
+            "3\300)\300\f\000\017\000\001\000\000\003\024\000\t\000\n\004alt1\300)"
+            "\300\f\000\017\000\001\000\000\003\024\000\t\000\024\004alt2\300)"
+            "\300\f\000\017\000\001\000\000\003\024\000\t\000(\004alt4\300)"};
 
     co_spawn(context_,
              query_test<qtype::MX>(
@@ -100,7 +102,7 @@ TEST_F(resolver_test, mx) {
 
 TEST_F(resolver_test, ptr) {
     static constexpr auto recv = std::span<const char>{
-            "u\361\201\200\000\001\000\001\000\000\000\000\0011\0011\0011\0011\ain-"
+            "\000\173\201\200\000\001\000\001\000\000\000\000\0011\0011\0011\0011\ain-"
             "addr\004arpa\000\000\f\000\001\300\f\000\f\000\001\000\000\002M\000\021\003one\003one\003one\003one\000"};
 
     co_spawn(context_, query_test<qtype::PTR>({"1.1.1.1", 1, {"one.one.one.one"}, recv}), check_completion);
@@ -109,7 +111,7 @@ TEST_F(resolver_test, ptr) {
 
 TEST_F(resolver_test, ns) {
     static constexpr auto recv =
-            std::span<const char>{"\350\224\201\200\000\001\000\002\000\000\000\000\btuposoft\003com\000\000\002\000"
+            std::span<const char>{"\000\173\201\200\000\001\000\002\000\000\000\000\btuposoft\003com\000\000\002\000"
                                   "\001\300\f\000\002\000\001\000\001Q\200\000\031\bbenedict\002ns\ncloudflare\300\025"
                                   "\300\f\000\002\000\001\000\001Q\200\000\f\tgabriella\3003"};
 
@@ -123,7 +125,7 @@ TEST_F(resolver_test, ns) {
 
 TEST_F(resolver_test, cname) {
     static constexpr auto recv =
-            std::span<const char>{"\323\371\201\200\000\001\000\001\000\000\000\000\nbucketname\002s3\tamazonaws\003com"
+            std::span<const char>{"\000\173\201\200\000\001\000\001\000\000\000\000\nbucketname\002s3\tamazonaws\003com"
                                   "\000\000\005\000\001\300\f\000\005\000\001\000\000\247E\000\t\006s3-1-w\300\032"};
 
     co_spawn(context_, query_test<qtype::CNAME>({"bucketname.s3.amazonaws.com", 1, {"s3-1-w.amazonaws.com"}, recv}),
@@ -133,7 +135,7 @@ TEST_F(resolver_test, cname) {
 }
 
 TEST_F(resolver_test, a_query_returns_cname_and_address_in_wire_order) {
-    static constexpr auto raw = std::span{"\022\064\201\200\000\001\000\002\000\000\000\000"
+    static constexpr auto raw = std::span{"\000\173\201\200\000\001\000\002\000\000\000\000"
                                           "\003www\007example\003com\000\000\001\000\001"
                                           "\300\014\000\005\000\001\000\000\000\074\000\011\006target\300\020"
                                           "\300\055\000\001\000\001\000\000\000\074\000\004\300\000\002\001"};
@@ -143,7 +145,7 @@ TEST_F(resolver_test, a_query_returns_cname_and_address_in_wire_order) {
     EXPECT_CALL(*transport, send(_)).WillOnce(Invoke([](const auto &) -> auto { return ok(); }));
     EXPECT_CALL(*transport, receive(_, _)).WillOnce(Invoke([](auto dst, auto) -> auto { return recv_with(raw, dst); }));
 
-    auto resolv = resolver{transport};
+    auto resolv = resolver{transport, [] -> std::uint16_t { return test_query_id; }};
     auto result = co_spawn(context_, resolv.query<qtype::A>("www.example.com"), use_future);
 
     context_.run();
@@ -163,7 +165,7 @@ TEST_F(resolver_test, a_query_returns_cname_and_address_in_wire_order) {
 }
 
 TEST_F(resolver_test, malformed_response_propagates_parser_exception) {
-    static constexpr auto raw = std::span{"\022\064\201\200\000\001\000\002\000\000\000\000"
+    static constexpr auto raw = std::span{"\000\173\201\200\000\001\000\002\000\000\000\000"
                                           "\003www\007example\003com\000\000\001\000\001"
                                           "\300\014\000\005\000\001\000\000\000\074\000\011\006target\300\020"
                                           "\300\055\000\001\000\001\000\000\000\074\000\004\300\000\002"};
@@ -171,9 +173,11 @@ TEST_F(resolver_test, malformed_response_propagates_parser_exception) {
     const auto transport = std::make_shared<mock_dns_transport>();
 
     EXPECT_CALL(*transport, send(_)).WillOnce(Invoke([](const auto &) -> auto { return ok(); }));
-    EXPECT_CALL(*transport, receive(_, _)).WillOnce(Invoke([](auto dst, auto) -> auto { return recv_with(raw, dst); }));
+    EXPECT_CALL(*transport, receive(_, _)).WillOnce(Invoke([](auto dst, auto) -> auto {
+        return recv_with(raw.first(raw.size() - 1), dst);
+    }));
 
-    auto resolv = resolver{transport};
+    auto resolv = resolver{transport, [] -> std::uint16_t { return test_query_id; }};
     auto result = co_spawn(context_, resolv.query<qtype::A>("www.example.com"), use_future);
 
     context_.run();
