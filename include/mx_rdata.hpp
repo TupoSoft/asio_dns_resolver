@@ -11,4 +11,4 @@ namespace tuposoft::asio::dns {
     auto operator==(const mx_rdata &, const mx_rdata &) -> bool;
 
     auto tie_mx_rdata(const mx_rdata &);
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns
