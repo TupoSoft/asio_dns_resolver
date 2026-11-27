@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 namespace tuposoft::asio::dns {
     struct soa_rdata {
@@ -17,4 +17,4 @@ namespace tuposoft::asio::dns {
     auto tie_soa_rdata(const soa_rdata &);
 
     auto operator==(const soa_rdata &, const soa_rdata &) -> bool;
-}; // namespace tuposoft
+}; // namespace tuposoft::asio::dns

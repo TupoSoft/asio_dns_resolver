@@ -8,4 +8,4 @@ namespace tuposoft::asio::dns {
     auto operator==(const mx_rdata &first, const mx_rdata &second) -> bool {
         return tie_mx_rdata(first) == tie_mx_rdata(second);
     }
-} // namespace tuposoft
+} // namespace tuposoft::asio::dns
